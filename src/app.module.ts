@@ -7,6 +7,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { TypeOrmModuleOptions } from "@nestjs/typeorm";
 import { typeOrmConfig } from "./common/config/database.config"; // Sesuaikan path dengan lokasi file config Anda
 import { CommandsModule } from "./users/commands/commands.module";
+import { AuthModule } from "./auth/auth.module";
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { CommandsModule } from "./users/commands/commands.module";
         return databaseConfig;
       },
     }),
+    AuthModule,
     UsersModule,
     CommandsModule,
   ],

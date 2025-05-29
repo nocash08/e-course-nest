@@ -13,7 +13,6 @@ export const deleteFile = (filePath: string): boolean => {
       return false;
     }
 
-    // Remove 'public/' prefix if it exists in the filePath
     const normalizedPath = filePath.replace(/^public[/\\]/, "");
     const fullPath = path.join(process.cwd(), "public", normalizedPath);
 

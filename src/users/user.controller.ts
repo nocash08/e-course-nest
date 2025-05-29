@@ -23,7 +23,6 @@ import { UpdateUserDto } from "./dto/update-user.dto";
 import { PaginationDto } from "./dto/pagination.dto";
 import { UserResponseDto } from "./dto/user-response.dto";
 import { ResponseDto } from "../common/dto/response.dto";
-import { BecomeSellerDto } from "./dto/become-seller.dto";
 import { multerOptions } from "../common/config/multer.config";
 
 @Controller()
@@ -85,15 +84,5 @@ export class UsersController {
   @HttpCode(HttpStatus.OK)
   async delete(@Param("uuid") uuid: string): Promise<ResponseDto<null>> {
     return this.usersService.deleteUser(uuid);
-  }
-
-  @UseGuards(AuthGuard)
-  @Post("/user/:uuid/become-seller")
-  @HttpCode(HttpStatus.OK)
-  async becomeSeller(
-    @Param("uuid") uuid: string,
-    @Body() becomeSellerDto: BecomeSellerDto,
-  ): Promise<ResponseDto<UserResponseDto>> {
-    return this.usersService.becomeSeller(uuid, becomeSellerDto);
   }
 }

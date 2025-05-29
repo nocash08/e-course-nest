@@ -17,7 +17,6 @@ import { UpdateUserDto } from "./dto/update-user.dto";
 import { PaginationDto } from "./dto/pagination.dto";
 import { UserResponseDto } from "./dto/user-response.dto";
 import { ResponseDto } from "../common/dto/response.dto";
-import { BecomeSellerDto } from "./dto/become-seller.dto";
 import { RoleType } from "./enum/role-type.enum";
 import { isValidUUID } from "../utils/uuid-validation.util";
 import { deleteFile } from "../utils/file.util";
@@ -281,60 +280,6 @@ export class UsersService {
         throw error;
       }
       throw new Error("Failed to update user: " + error.message);
-    }
-  }
-
-  async becomeSeller(
-    uuid: string,
-    becomeSellerDto: BecomeSellerDto,
-  ): Promise<ResponseDto<UserResponseDto>> {
-    try {
-      if (!uuid) {
-        throw new BadRequestException("UUID is required");
-      }
-
-      if (!isValidUUID(uuid)) {
-        throw new BadRequestException("Invalid UUID format");
-      }
-
-      const user = await this.userRepository.findOne({
-        where: { uuid },
-        relations: ["roles"],
-      });
-
-      if (!user) {
-        throw new NotFoundException("User not found");
-      }
-
-      const sellerRole = await this.roleRepository.findOne({
-        where: { name: RoleType.SELLER },
-      });
-
-      if (!sellerRole) {
-        throw new NotFoundException("Seller role not found");
-      }
-
-      if (user.roles.some((role) => role.uuid === sellerRole.uuid)) {
-        throw new ConflictException("User is already a seller");
-      }
-
-      user.roles.push(sellerRole);
-      const updatedUser = await this.userRepository.save(user);
-
-      return new ResponseDto(
-        200,
-        "User is now a seller",
-        new UserResponseDto(updatedUser),
-      );
-    } catch (error) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException ||
-        error instanceof ConflictException
-      ) {
-        throw error;
-      }
-      throw new Error("Failed to upgrade user to seller: " + error.message);
     }
   }
 

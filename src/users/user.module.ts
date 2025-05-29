@@ -20,5 +20,6 @@ config();
   ],
   controllers: [UsersController],
   providers: [UsersService],
+  exports: [UsersService, JwtModule],
 })
 export class UsersModule {}
