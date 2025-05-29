@@ -13,17 +13,21 @@ import {
   UploadedFile,
   Query,
   HttpStatus,
+  Req,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { UsersService } from "./user.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
-import { AuthGuard } from "./guard/auth.guard";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { PaginationDto } from "./dto/pagination.dto";
 import { UserResponseDto } from "./dto/user-response.dto";
 import { ResponseDto } from "../common/dto/response.dto";
 import { multerOptions } from "../common/config/multer.config";
+import { BecomeSellerDto } from "./dto/become-seller.dto";
+import { SellerProfileResponseDto } from "./dto/seller-profile-response.dto";
+import { JwtAuthGuard } from "src/auth/guards/jwt-auth.guard";
+import { AuthenticatedRequest } from "./interfaces/authenticated-request.interface";
 
 @Controller()
 @UseInterceptors(ClassSerializerInterceptor)
@@ -38,19 +42,19 @@ export class UsersController {
     return this.usersService.getAllUsers(paginationDto);
   }
 
-  @Get("/user/:uuid")
+  @Get("/user/:id")
   @HttpCode(HttpStatus.OK)
-  async getUserByUuid(
-    @Param("uuid") uuid: string,
+  async getUserById(
+    @Param("id") id: string,
   ): Promise<ResponseDto<UserResponseDto>> {
-    return this.usersService.getUserByUuid(uuid);
+    return this.usersService.getUserById(id);
   }
 
   @Post("/auth/register")
   @HttpCode(HttpStatus.CREATED)
   async register(
     @Body() registerDto: RegisterDto,
-  ): Promise<ResponseDto<{ uuid: string }>> {
+  ): Promise<ResponseDto<{ id: string }>> {
     return this.usersService.registerUser({
       ...registerDto,
     });
@@ -64,25 +68,44 @@ export class UsersController {
     return this.usersService.loginUser(loginDto);
   }
 
-  @UseGuards(AuthGuard)
-  @Put("/user/:uuid")
+  @UseGuards(JwtAuthGuard)
+  @Put("/user/:id")
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor("image", multerOptions("image-profile")))
-  async update(
-    @Param("uuid") uuid: string,
+  async updateUser(
+    @Param("id") id: string,
     @Body() updateUserDto: UpdateUserDto,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<ResponseDto<null>> {
-    return this.usersService.updateUser(uuid, {
+    return this.usersService.updateUser(id, {
       ...updateUserDto,
       image: file?.filename,
     });
   }
 
-  @UseGuards(AuthGuard)
-  @Delete("/user/:uuid")
+  @UseGuards(JwtAuthGuard)
+  @Delete("/user/:id")
   @HttpCode(HttpStatus.OK)
-  async delete(@Param("uuid") uuid: string): Promise<ResponseDto<null>> {
-    return this.usersService.deleteUser(uuid);
+  async deleteUser(@Param("id") id: string): Promise<ResponseDto<null>> {
+    return this.usersService.deleteUser(id);
+  }
+
+  @Get("/seller/:id/profile")
+  @UseGuards()
+  @HttpCode(HttpStatus.OK)
+  async getSellerProfile(
+    @Param("id") id: string,
+  ): Promise<ResponseDto<SellerProfileResponseDto | null>> {
+    return this.usersService.getSellerProfile(id);
+  }
+
+  @Post("/seller/apply")
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.CREATED)
+  async applyAsSeller(
+    @Req() req: AuthenticatedRequest,
+    @Body() becomeSellerDto: BecomeSellerDto,
+  ): Promise<ResponseDto<null>> {
+    return this.usersService.applyAsSeller(req.user.id, becomeSellerDto);
   }
 }

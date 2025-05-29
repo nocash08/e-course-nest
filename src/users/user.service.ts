@@ -20,6 +20,9 @@ import { ResponseDto } from "../common/dto/response.dto";
 import { RoleType } from "./enum/role-type.enum";
 import { isValidUUID } from "../utils/uuid-validation.util";
 import { deleteFile } from "../utils/file.util";
+import { BecomeSellerDto } from "./dto/become-seller.dto";
+import { SellerProfile } from "./entities/seller-profile.entity";
+import { SellerProfileResponseDto } from "./dto/seller-profile-response.dto";
 
 @Injectable()
 export class UsersService {
@@ -28,6 +31,8 @@ export class UsersService {
     private userRepository: Repository<User>,
     @InjectRepository(Role)
     private roleRepository: Repository<Role>,
+    @InjectRepository(SellerProfile)
+    private sellerProfileRepository: Repository<SellerProfile>,
     private jwtService: JwtService,
   ) {}
 
@@ -73,18 +78,18 @@ export class UsersService {
     }
   }
 
-  async getUserByUuid(uuid: string): Promise<ResponseDto<UserResponseDto>> {
+  async getUserById(id: string): Promise<ResponseDto<UserResponseDto>> {
     try {
-      if (!uuid) {
-        throw new BadRequestException("UUID is required");
+      if (!id) {
+        throw new BadRequestException("ID is required");
       }
 
-      if (!isValidUUID(uuid)) {
-        throw new BadRequestException("Invalid UUID format");
+      if (!isValidUUID(id)) {
+        throw new BadRequestException("Invalid ID format");
       }
 
       const user = await this.userRepository.findOne({
-        where: { uuid },
+        where: { id },
         relations: ["roles"],
       });
 
@@ -110,7 +115,7 @@ export class UsersService {
 
   async registerUser(
     registerDto: RegisterDto,
-  ): Promise<ResponseDto<{ uuid: string }>> {
+  ): Promise<ResponseDto<{ id: string }>> {
     try {
       await this.ensureRolesExist();
 
@@ -121,6 +126,7 @@ export class UsersService {
         throw new ConflictException("Email already exists");
       }
 
+      // Get BUYER role
       const buyerRole = await this.roleRepository.findOne({
         where: { name: RoleType.BUYER },
       });
@@ -140,7 +146,7 @@ export class UsersService {
       const savedUser = await this.userRepository.save(newUser);
 
       return new ResponseDto(201, "User created successfully", {
-        uuid: savedUser.uuid,
+        id: savedUser.id,
       });
     } catch (error) {
       if (
@@ -176,7 +182,7 @@ export class UsersService {
       }
 
       const payload = {
-        uuid: user.uuid,
+        id: user.id,
         name: user.name,
         email: user.email,
         roles: user.roles.map((role) => role.name),
@@ -194,18 +200,18 @@ export class UsersService {
     }
   }
 
-  async deleteUser(uuid: string): Promise<ResponseDto<null>> {
+  async deleteUser(id: string): Promise<ResponseDto<null>> {
     try {
-      if (!uuid) {
-        throw new BadRequestException("UUID is required");
+      if (!id) {
+        throw new BadRequestException("ID is required");
       }
 
-      if (!isValidUUID(uuid)) {
-        throw new BadRequestException("Invalid UUID format");
+      if (!isValidUUID(id)) {
+        throw new BadRequestException("Invalid ID format");
       }
 
       const user = await this.userRepository.findOne({
-        where: { uuid },
+        where: { id },
         relations: ["roles"],
       });
 
@@ -228,20 +234,20 @@ export class UsersService {
   }
 
   async updateUser(
-    uuid: string,
+    id: string,
     updateUserDto: UpdateUserDto,
   ): Promise<ResponseDto<null>> {
     try {
-      if (!uuid) {
-        throw new BadRequestException("UUID is required");
+      if (!id) {
+        throw new BadRequestException("ID is required");
       }
 
-      if (!isValidUUID(uuid)) {
-        throw new BadRequestException("Invalid UUID format");
+      if (!isValidUUID(id)) {
+        throw new BadRequestException("Invalid ID format");
       }
 
       const user = await this.userRepository.findOne({
-        where: { uuid },
+        where: { id },
         relations: ["roles"],
       });
 
@@ -280,6 +286,95 @@ export class UsersService {
         throw error;
       }
       throw new Error("Failed to update user: " + error.message);
+    }
+  }
+
+  async applyAsSeller(
+    userId: string,
+    becomeSellerDto: BecomeSellerDto,
+  ): Promise<ResponseDto<null>> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+        relations: ["roles"],
+      });
+
+      if (!user) {
+        throw new NotFoundException("User not found");
+      }
+
+      if (user.roles.some((role) => role.name === RoleType.SELLER)) {
+        throw new ConflictException("User is already a seller");
+      }
+
+      const sellerRole = await this.roleRepository.findOne({
+        where: { name: RoleType.SELLER },
+      });
+
+      if (!sellerRole) {
+        throw new NotFoundException("Seller role not found in system");
+      }
+
+      const sellerProfile = this.sellerProfileRepository.create({
+        ...becomeSellerDto,
+        user,
+      });
+
+      user.roles = [...user.roles, sellerRole];
+
+      await Promise.all([
+        this.sellerProfileRepository.save(sellerProfile),
+        this.userRepository.save(user),
+      ]);
+
+      return new ResponseDto(201, "Successfully registered as a seller");
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ConflictException
+      ) {
+        throw error;
+      }
+      throw new Error("Failed to register as seller: " + error.message);
+    }
+  }
+
+  async getSellerProfile(
+    userId: string,
+  ): Promise<ResponseDto<SellerProfileResponseDto | null>> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+        relations: ["roles"],
+      });
+
+      if (!user) {
+        throw new NotFoundException("User not found");
+      }
+
+      const isSeller = user.roles.some((role) => role.name === RoleType.SELLER);
+      if (!isSeller) {
+        return new ResponseDto(200, "User is not a seller", null);
+      }
+
+      const sellerProfile = await this.sellerProfileRepository.findOne({
+        where: { user: { id: userId } },
+      });
+
+      if (!sellerProfile) {
+        throw new NotFoundException("Seller profile not found");
+      }
+
+      return new ResponseDto(
+        200,
+        "Seller profile retrieved successfully",
+        new SellerProfileResponseDto(sellerProfile),
+      );
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new Error("Failed to get seller profile: " + error.message);
     }
   }
 

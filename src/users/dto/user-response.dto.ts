@@ -1,22 +1,19 @@
 import { User } from "../entities/user.entity";
-import { Role } from "../entities/role.entity";
 
 export class UserResponseDto {
-  uuid: string;
+  id: string;
   name: string;
   email: string;
-  roles: string[];
   image: string | null;
+  roles: string[];
   createdAt: Date;
-  updatedAt: Date;
 
   constructor(user: User) {
-    this.uuid = user.uuid;
+    this.id = user.id;
     this.name = user.name;
     this.email = user.email;
-    this.roles = user.roles?.map((role) => role.name) || [];
     this.image = user.image;
+    this.roles = user.roles.map((role) => role.name);
     this.createdAt = user.createdAt;
-    this.updatedAt = user.updatedAt;
   }
 }

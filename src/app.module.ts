@@ -8,12 +8,12 @@ import { TypeOrmModuleOptions } from "@nestjs/typeorm";
 import { typeOrmConfig } from "./common/config/database.config"; // Sesuaikan path dengan lokasi file config Anda
 import { CommandsModule } from "./users/commands/commands.module";
 import { AuthModule } from "./auth/auth.module";
-
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       load: [typeOrmConfig],
+      envFilePath: ".env",
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

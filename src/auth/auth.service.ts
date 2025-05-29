@@ -55,7 +55,7 @@ export class AuthService {
 
   async createOAuthToken(user: User): Promise<string> {
     const payload = {
-      uuid: user.uuid,
+      id: user.id,
       name: user.name,
       email: user.email,
       roles: user.roles.map((role) => role.name),

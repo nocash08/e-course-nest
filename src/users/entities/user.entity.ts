@@ -6,14 +6,16 @@ import {
   UpdateDateColumn,
   ManyToMany,
   JoinTable,
+  OneToOne,
 } from "typeorm";
 import { Role } from "./role.entity";
 import { Exclude } from "class-transformer";
+import { SellerProfile } from "./seller-profile.entity";
 
 @Entity("users")
 export class User {
   @PrimaryGeneratedColumn("uuid")
-  uuid: string;
+  id: string;
 
   @Column()
   name: string;
@@ -28,16 +30,16 @@ export class User {
   @Column({ nullable: true, type: "varchar" })
   image: string | null;
 
-  @ManyToMany(() => Role)
+  @ManyToMany(() => Role, { eager: true })
   @JoinTable({
     name: "user_roles",
     joinColumn: {
-      name: "user_uuid",
-      referencedColumnName: "uuid",
+      name: "user_id",
+      referencedColumnName: "id",
     },
     inverseJoinColumn: {
-      name: "role_uuid",
-      referencedColumnName: "uuid",
+      name: "role_id",
+      referencedColumnName: "id",
     },
   })
   roles: Role[];
@@ -47,4 +49,7 @@ export class User {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @OneToOne(() => SellerProfile, (profile) => profile.user)
+  sellerProfile: SellerProfile;
 }
